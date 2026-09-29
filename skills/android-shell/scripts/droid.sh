@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 # droid - drive this Android device from Termux at shell (uid 2000) level via Shizuku.
 # Run `droid help` for usage.
 set -uo pipefail

@@ -254,7 +254,7 @@ dump → 有【第N题】锚点？ → 没有：dev_app 重试(≤2) → 仍没�
 ```text
 $ D=$(dev_collect 6 下一题 1.0 ~/.mquiz2); echo "$D"
 2
-/data/data/com.termux/files/home/.mquiz2
+<local work dir>
 ```
 
 第一行是远端 `ls | wc -l` 的题目数，第二行才是本地目录。文档应写明「取最后一行」，

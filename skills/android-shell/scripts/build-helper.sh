@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 # Build the droid-notify helper: Java -> dex ("apk") that app_process can load.
 #
 #   pkg install openjdk-21 d8
