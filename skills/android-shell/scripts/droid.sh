@@ -177,9 +177,12 @@ truncate_chars() {
 # droid tell "短消息" - push a short alerting message to the user (reaches the
 # Mi Band). Uses its own notification id so it does not fight the status notice.
 tell() {
-  [ $# -gt 0 ] || die 'usage: droid tell "short message (<=20 chars)"'
+  # Default cap suits a Mi Band; -n raises it for phone-only notices.
+  local max="${DROID_MSG_MAX:-20}"
+  if [ "${1:-}" = "-n" ] && [ $# -ge 2 ]; then max="$2"; shift 2; fi
+  [ $# -gt 0 ] || die 'usage: droid tell [-n N] "message"'
   local msg jar
-  msg="$(truncate_chars "$*" 20)"
+  msg="$(truncate_chars "$*" "$max")"
   if jar="$(helper_jar)"; then
     env -u LD_LIBRARY_PATH -u LD_PRELOAD CLASSPATH="$jar" DROID_NOTIFY_ID="$MSG_ID" \
       /system/bin/app_process -Xnoimage-dex2oat / DroidNotify post --alert "$TITLE" "$msg"
