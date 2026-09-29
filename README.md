@@ -46,6 +46,21 @@
 
 ## 快速开始
 
+### 一句话安装（推荐）
+
+把下面这句直接发给你的 Agent（Codex / OpenClaw 都适用），它会把该做的都做完：
+
+> 从 https://github.com/MC090610/yizhijiaoScript 安装 `skills/android-quiz` 和 `skills/android-shell`
+> 到你的个人技能目录（Codex 是 `$CODEX_HOME/skills`，OpenClaw 用 `openclaw skills install`），
+> 再把 `skills/android-quiz/prompts/android-quiz.md` 放进 prompts / command 目录，
+> 最后按 `android-quiz/SKILL.md` 的 Step 0 和 Step 1 自检环境（缺 Node.js、bash、
+> adb 或 Termux+Shizuku 时先告诉我），并汇报：传输方式、是实体机还是模拟器、有没有 root。
+
+它会依次做三件事：**装技能 → 装斜杠命令 → 自检环境**。
+自检结果会告诉你「能不能用、缺什么」，缺东西时它应当直接说明该怎么修，而不是硬猜。
+
+### 手动安装（等价做法）
+
 **前置条件**
 
 | 依赖 | 版本/说明 |
