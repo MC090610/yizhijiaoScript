@@ -17,6 +17,7 @@
 <p align="center">
   <a href="#快速开始">快速开始</a> ·
   <a href="#技能清单">技能清单</a> ·
+  <a href="#使用前置termux--shizuku">使用前置</a> ·
   <a href="#设计要点">设计要点</a> ·
   <a href="#安全边界">安全边界</a> ·
   <a href="#已知限制">已知限制</a>
@@ -44,6 +45,17 @@
 `android-shell` 是底座：`android-quiz` 在 Termux 本机跑的时候会用到它提供的 `rish` 与通知能力；
 纯 adb 场景下只装 `android-quiz` 也能用。
 
+## 使用前置（Termux + Shizuku）
+
+走**手机本机**路线时，需要先准备 Termux + Shizuku（**无需 root**）。
+安装步骤、官方文档入口，以及小米/POCO 那个「USB 调试（安全设置）」的坑，都在这份单独文档里：
+
+➡️ **[Termux + Shizuku 使用前置（含各厂商 FAQ）](docs/termux-setup.md)**
+
+> ⚠️ **纯 Termux 路线有一定操作难度**：要做开发者选项、无线调试配对、把 `rish` 放进 Termux 私有目录，
+> 还要应付各家厂商的定制限制。**建议有一定玩机经验再使用**；只想省事的话，用电脑 adb 驱动即可，
+> 配置简单得多。
+
 ## 快速开始
 
 ### 一句话安装（推荐）
@@ -67,7 +79,7 @@
 | --- | --- |
 | Node.js | 运行 `dump.js` / `px.js`（解析与像素分析） |
 | Bash | 运行 `andev.sh`（Windows 用 Git Bash 或 WSL） |
-| adb（platform-tools）**或** Termux + Shizuku | 二选一，`andev detect` 会自动选择 |
+| adb（platform-tools）**或** Termux + Shizuku | 二选一，`andev detect` 会自动选择；走 Termux 路线请先完成上一节 |
 
 **1. 安装技能**
 
