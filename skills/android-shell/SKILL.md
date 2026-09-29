@@ -139,6 +139,16 @@ Two channels, because they need different alerting:
 the message short. If the phone's own progress updates should never reach the band,
 mute the "Codex 进行中" channel in system settings; the done channel is separate.
 
+For a one-off message that is not tied to a task state, use `droid tell "..."`
+(same alerting channel, own notification id so it does not fight the status
+notice). It is trimmed to 20 characters by default for the band; when the message
+is really meant for the phone screen, raise the cap:
+
+```bash
+droid tell "任务已完成"                  # <= 20 chars, band-friendly
+droid tell -n 50 "仓库已推送，练习内容已脱敏，本机清理完毕"   # longer, phone
+```
+
 Notifications are attributed to **com.termux** (not `com.android.shell`), which is
 what the `scripts/termux_notify` helper is for - see the next section.
 
