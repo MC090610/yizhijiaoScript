@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Quiz Runner"
+  short_description: "Answer quizzes inside an Android app over adb"
+  default_prompt: "Use $android-quiz to answer the quiz in this Android app - ask me first whether the target is a USB phone, an emulator or this device itself, then check adb/root/Shizuku and drive the app."

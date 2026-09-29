@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Shell"
+  short_description: "Drive this phone from Termux via Shizuku shell"
+  default_prompt: "Use $android-shell to read or drive this Android phone from Termux - screenshots, UI dumps, taps, app launching, and droid's status notifications."
