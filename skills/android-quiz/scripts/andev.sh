@@ -150,8 +150,9 @@ dev_shot_raw() { # [local_path]
   local out="${1:-$RAW}"
   case "$TRANSPORT" in
     adb)  andev_adb exec-out screencap > "$out" ;;
-    rish) "$RISH" -c 'screencap > /sdcard/.andev.raw'; cp /sdcard/.andev.raw "$out"
-          "$RISH" -c 'rm -f /sdcard/.andev.raw' >/dev/null 2>&1 ;;
+    rish) "$RISH" -c "mkdir -p $DEV_SCRATCH; screencap > $DEV_SCRATCH/raw"
+          cp "$DEV_SCRATCH/raw" "$out"
+          "$RISH" -c "rm -f $DEV_SCRATCH/raw" >/dev/null 2>&1 ;;
     su)   su -c 'screencap > /data/local/tmp/.andev.raw'
           su -c 'cat /data/local/tmp/.andev.raw' > "$out"
           su -c 'rm -f /data/local/tmp/.andev.raw' ;;
@@ -161,8 +162,9 @@ dev_shot_png() { # [local_path]
   local out="${1:-${RAW%.raw}.png}"
   case "$TRANSPORT" in
     adb)  andev_adb exec-out screencap -p > "$out" ;;
-    rish) "$RISH" -c 'screencap -p /sdcard/.andev.png'; cp /sdcard/.andev.png "$out"
-          "$RISH" -c 'rm -f /sdcard/.andev.png' >/dev/null 2>&1 ;;
+    rish) "$RISH" -c "mkdir -p $DEV_SCRATCH; screencap -p $DEV_SCRATCH/shot.png"
+          cp "$DEV_SCRATCH/shot.png" "$out"
+          "$RISH" -c "rm -f $DEV_SCRATCH/shot.png" >/dev/null 2>&1 ;;
     su)   su -c 'screencap -p /data/local/tmp/.andev.png'
           su -c 'cat /data/local/tmp/.andev.png' > "$out" ;;
   esac
@@ -184,17 +186,30 @@ px_selected()   { node "$PXJS" selected "$@"; }
 # ------------------------------------------------------------- text-first path
 # One uiautomator dump yields the stem, every option and every button with real
 # bounds - far cheaper than looking at a screenshot. Parse it locally.
-DEV_DUMP_DIR="${DEV_DUMP_DIR:-/sdcard/.andev-dumps}"
+# All device-side scratch lives under ONE hidden directory, and is removed again
+# once the caller has the results locally. Leaving raw frames on /sdcard is how a
+# previous run quietly parked 64 MB (five 13 MB frames) in the phone's storage
+# root - see docs/termux-setup.md in the project for the cleanup note.
+DEV_SCRATCH="${DEV_SCRATCH:-/sdcard/.andev}"
+DEV_DUMP_DIR="${DEV_DUMP_DIR:-$DEV_SCRATCH/dumps}"
 
 dev_dump() {   # [local xml path]
   local out="${1:-$HOME/.andev-dump.xml}"
-  dev_sh 'uiautomator dump /sdcard/.andev-dump.xml' >/dev/null 2>&1
+  dev_sh "mkdir -p $DEV_SCRATCH; uiautomator dump $DEV_SCRATCH/dump.xml" >/dev/null 2>&1
   case "$TRANSPORT" in
-    adb)  andev_adb pull /sdcard/.andev-dump.xml "$out" >/dev/null 2>&1 ;;
-    *)    cp /sdcard/.andev-dump.xml "$out" 2>/dev/null ;;
+    adb)  andev_adb pull "$DEV_SCRATCH/dump.xml" "$out" >/dev/null 2>&1 ;;
+    *)    cp "$DEV_SCRATCH/dump.xml" "$out" 2>/dev/null ;;
   esac
+  # the device copy is scratch - drop it right away
+  dev_sh "rm -f $DEV_SCRATCH/dump.xml" >/dev/null 2>&1
   [ -s "$out" ] || { warn "uiautomator dump produced nothing"; return 1; }
   printf '%s\n' "$out"
+}
+
+# dev_clean - remove every device-side scratch file this skill may have left
+dev_clean() {
+  dev_sh "rm -rf $DEV_SCRATCH" >/dev/null 2>&1
+  printf 'cleaned device scratch: %s\n' "$DEV_SCRATCH"
 }
 
 # dev_collect <maxQuestions> [nextLabel] [sleepSecs] [localDir]
@@ -202,7 +217,8 @@ dev_dump() {   # [local xml path]
 # bounds -> tap its centre -> repeat. Prints the local directory of XML files.
 dev_collect() {
   local n="${1:-50}" label="${2:-下一题}" slp="${3:-1.1}" out="${4:-$HOME/.andev-dumps}"
-  local stage=/sdcard/.andev-collect.sh dir="$DEV_DUMP_DIR"
+  local stage="$DEV_SCRATCH/collect.sh" dir="$DEV_DUMP_DIR"
+  dev_sh "mkdir -p $DEV_SCRATCH" >/dev/null 2>&1
   printf '%s\n' \
     "rm -rf $dir; mkdir -p $dir" \
     'i=0' \
@@ -223,6 +239,7 @@ dev_collect() {
     adb)  andev_adb pull "$dir/." "$out/" >/dev/null 2>&1 ;;
     *)    cp "$dir"/*.xml "$out"/ 2>/dev/null ;;
   esac
+  dev_sh "rm -rf $dir $stage" >/dev/null 2>&1   # fetched -> drop the device copies
   printf '%s\n' "$out"
 }
 
@@ -235,7 +252,7 @@ dump_quiz()  { node "$DUMPJS" quiz "$@"; }
 # Capture one frame per question in a SINGLE round trip, then locate every
 # question's option row locally. This is what removes the 30-60 round trips a
 # naive run spends on look-tap-look-tap.
-DEV_SHOT_DIR="${DEV_SHOT_DIR:-/sdcard/.andev-shots}"
+DEV_SHOT_DIR="${DEV_SHOT_DIR:-$DEV_SCRATCH/shots}"
 
 dev_capture() {   # <tabY> <tabX...>   -> prints the local directory of frames
   local tabY="$1"; shift
@@ -251,6 +268,8 @@ dev_capture() {   # <tabY> <tabX...>   -> prints the local directory of frames
     adb)  andev_adb pull "$DEV_SHOT_DIR/." "$out/" >/dev/null 2>&1 ;;
     *)    cp "$DEV_SHOT_DIR"/*.raw "$out"/ 2>/dev/null ;;
   esac
+  # 5 raw frames are ~64 MB; never leave them on the phone
+  dev_sh "rm -rf $DEV_SHOT_DIR" >/dev/null 2>&1
   printf '%s\n' "$out"
 }
 
@@ -504,6 +523,7 @@ andev - Android UI automation transport (adb / rish / su) + pixel helpers
   px_sweep <profile.json> <row> <y0,y1> <dir>   locate the row in every captured frame
   px_selected <profile.json> <row> <dir> [y0,y1]  which option is selected, per frame
   dev_dump [out.xml]                            one a11y dump + parse locally
+  dev_clean                                    remove device-side scratch (see below)
   dump_nodes <file.xml> | dump_find <file.xml> <text> | dump_quiz <file.xml>
   dev_collect <maxQ> ["下一题"] [sleep] [dir]    walk the whole set in ONE round trip
 
@@ -511,6 +531,11 @@ Text first: a uiautomator dump gives the stem, the option labels and the real
 bounds of every button in a single call - use it instead of reading screenshots,
 and use pixels only to confirm a tap. Hybrid WebViews keep the previous page in
 the tree, so anchor on the LAST 【第N题】 and cut at 上一题/下一题/交卷.
+
+Scratch hygiene: every device-side temp file goes under $DEV_SCRATCH
+(default /sdcard/.andev) and is deleted as soon as the result has been fetched.
+dev_dump / dev_collect / dev_capture clean up after themselves; run dev_clean if
+a run was interrupted. Never leave raw frames on /sdcard - five of them are 64 MB.
   dev_locate_row <profile.json> <row> <y0,y1>   find the row inside a band on the live screen
 
 Layout cache: option boxes and question numbers do not move between questions, so

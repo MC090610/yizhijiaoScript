@@ -401,6 +401,11 @@ answer, verify, submit.
 - **A failed verification must be retried immediately** (re-tap, re-check). One
   run submitted with an unverified answer and scored 50.
 - **Never submit while any answer is unverified.**
+- **Clean up on the device.** Every helper writes its device-side scratch under
+  `/sdcard/.andev` and deletes it once the result has been fetched locally;
+  `dev_clean` removes the whole scratch directory. Raw frames are 13 MB each -
+  an earlier run left five of them (64 MB) sitting in the phone's storage root,
+  which is exactly the kind of litter to avoid.
 - **Clean up** the temp frames you create.
 
 ## Safety
@@ -416,7 +421,7 @@ answer, verify, submit.
 [references/quiz-playbook.md](references/quiz-playbook.md) has both measured
 flows with their real numbers:
 
-- **text-first** - a 49-question set walked in ~7 round trips / ~10 min;
+- **text-first** - a 49-question set walked in ~7 round trips / ~10 min (96 分);
 - **pixel path** - a 5-question set in ~6 round trips / ~45 s.
 
 The raw evidence behind those numbers (per-question y samples, the three dialogs,
