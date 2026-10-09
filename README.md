@@ -42,8 +42,13 @@
 | [`skills/android-quiz`](skills/android-quiz/) | 在安卓 App 里答题：找作业 → 读题 → 作答 → 逐题校验 → 交卷 | 文本优先读屏、守卫批量、像素校验、设备记忆、实战记录 |
 | [`skills/android-shell`](skills/android-shell/) | 从 Termux 通过 Shizuku 读写这台手机 | 截图、点击、UI dump、通知（含手环推送）、媒体读取 |
 
-`android-shell` 是底座：`android-quiz` 在 Termux 本机跑的时候会用到它提供的 `rish` 与通知能力；
-纯 adb 场景下只装 `android-quiz` 也能用。
+**两个技能互相独立，按需只装一个**：
+
+- `android-quiz` 自带传输层（`adb` / `rish` / `su`）与像素工具，**不依赖** `android-shell`；
+- `android-shell` 提供通用的手机控制（截图、点击、通知、媒体），答题时用不到就可以不装。
+
+同时装两个会让每次会话都注入两份技能描述——**更费 API，弱一些的模型也更容易挑错技能**，
+所以推荐"用到哪个装哪个"。
 
 ## 使用前置（Termux + Shizuku）
 
@@ -60,16 +65,29 @@
 
 ### 一句话安装（推荐）
 
-把下面这句直接发给你的 Agent（Codex / OpenClaw 都适用），它会把该做的都做完：
+把**对应那一句**发给你的 Agent 就行（Codex / OpenClaw 都适用）。两句话是分开的，
+你只需要复制用到的那句。
 
-> 从 https://github.com/MC090610/yizhijiaoScript 安装 `skills/android-quiz` 和 `skills/android-shell`
-> 到你的个人技能目录（Codex 是 `$CODEX_HOME/skills`，OpenClaw 用 `openclaw skills install`），
-> 再把 `skills/android-quiz/prompts/android-quiz.md` 放进 prompts / command 目录，
-> 最后按 `android-quiz/SKILL.md` 的 Step 0 和 Step 1 自检环境（缺 Node.js、bash、
-> adb 或 Termux+Shizuku 时先告诉我），并汇报：传输方式、是实体机还是模拟器、有没有 root。
+**① 只装答题技能（`android-quiz`）** —— 找作业 → 读题 → 作答 → 逐题校验 → 交卷；
+电脑 adb 或 Termux + Shizuku 都能跑。
 
-它会依次做三件事：**装技能 → 装斜杠命令 → 自检环境**。
-自检结果会告诉你「能不能用、缺什么」，缺东西时它应当直接说明该怎么修，而不是硬猜。
+> 从 https://github.com/MC090610/yizhijiaoScript 安装 `skills/android-quiz` 到我的个人技能目录
+> （Codex 是 `$CODEX_HOME/skills`，OpenClaw 用 `openclaw skills install`），
+> 再把 `skills/android-quiz/prompts/android-quiz.md` 放进 prompts / command 目录；
+> 最后按 `android-quiz/SKILL.md` 的 Step 0 和 Step 1 自检环境（缺 Node.js、bash、adb
+> 或 Termux+Shizuku 时先告诉我），并汇报：传输方式、是实体机还是模拟器、有没有 root。
+
+**② 只装 Termux 控制技能（`android-shell`）** —— 截图、点击、UI dump、通知（含手环推送）、
+媒体读取；Termux + Shizuku 本机使用。
+
+> 从 https://github.com/MC090610/yizhijiaoScript 安装 `skills/android-shell` 到我的个人技能目录
+> （Codex 是 `$CODEX_HOME/skills`，OpenClaw 用 `openclaw skills install`），
+> 再把 `skills/android-shell/prompts/android-shell.md` 放进 prompts / command 目录；
+> 装好后跑 `skills/android-shell/scripts/droid.sh setup` 自检（rish、通知助手、PATH），
+> 并告诉我结果；想要短命令 `droid` 就把它软链到 `~/bin/`。
+
+**两个都要**：把上面两句一起发过去即可。
+每个技能自检完都会告诉你「能不能用、缺什么」，缺东西时应当直接说明该怎么修，而不是硬猜。
 
 ### 手动安装（等价做法）
 
@@ -85,12 +103,17 @@
 
 ```bash
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-cp -R skills/android-quiz  "${CODEX_HOME:-$HOME/.codex}/skills/"
+
+# 只装答题技能（自带 adb / rish 传输层，不依赖另一个技能）
+cp -R skills/android-quiz "${CODEX_HOME:-$HOME/.codex}/skills/"
+
+# 需要 Termux 本机控制（截图 / 通知 / 媒体）时再装这个；用不到可以不装
 cp -R skills/android-shell "${CODEX_HOME:-$HOME/.codex}/skills/"
 
 # 可选：让斜杠命令 /android-quiz 可用（重启 Codex 后生效）
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/prompts"
-cp skills/android-quiz/prompts/android-quiz.md "${CODEX_HOME:-$HOME/.codex}/prompts/"
+cp skills/android-quiz/prompts/android-quiz.md   "${CODEX_HOME:-$HOME/.codex}/prompts/"  # /android-quiz
+cp skills/android-shell/prompts/android-shell.md "${CODEX_HOME:-$HOME/.codex}/prompts/"  # /android-shell
 ```
 
 **2. 先确认环境**
