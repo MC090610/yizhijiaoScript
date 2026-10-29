@@ -147,6 +147,11 @@ dev_text / dev_fg / dev_shot_raw / dev_batch / dev_seq`, so an action string
 written once works on all three. Keep that separation: the actions are data, the
 transport is interchangeable.
 
+Asking the phone for the foreground, the keyguard state or a wake-up is the
+device layer, not the quiz layer: the helper names and the OEM (HyperOS) quirks -
+app freezer, blocked background starts, screen-off behaviour - are documented in
+the `android-shell` skill, [../android-shell/references/hyperos.md](../android-shell/references/hyperos.md).
+
 ## If bash or node is not available (plain adb only)
 
 Any agent on any OS can still do the whole job with just platform-tools:

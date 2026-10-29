@@ -55,6 +55,43 @@ that after the user has confirmed the exact items. Reading needs no flag, but se
 - Termux app id `com.termux` (uid 10278). `rish` and `rish_shizuku.dex` live in `$HOME`.
 - Shizuku 13.6.0, started via wireless debugging. `RISH_APPLICATION_ID=com.termux` is exported in `~/.bashrc`.
 
+## ZeroTermux session presets (SSH / SFTP)
+
+"Where are my saved SSH hosts?" does **not** need Shizuku, root or UI digging.
+ZeroTermux keeps them in its own shared preferences, and Codex already runs as
+that app's uid, so the file is readable directly:
+
+| what | where |
+|---|---|
+| prefs file | `/data/data/com.termux/shared_prefs/xinhao.xml` |
+| key | `<string name="ssh_device_list">` - an HTML-escaped **JSON array** |
+| fields | `alias`, `host`, `port`, `username`, `password`, `useKey` |
+
+Read it without leaking secrets - list targets, never the `password` field:
+
+```bash
+cat > "${TMPDIR:-/tmp}/sshlist.py" <<'PY'
+import re, json, html
+x = open("/data/data/com.termux/shared_prefs/xinhao.xml").read()
+m = re.search(r'<string name="ssh_device_list">(.*?)</string>', x, re.S)
+for i in json.loads(html.unescape(m.group(1))):
+    auth = "key" if i.get("useKey") else ("password" if i.get("password") else "none")
+    print(f'{i["alias"]}\t{i["username"]}@{i["host"]}:{i["port"]}\t{auth}')
+PY
+python3 "${TMPDIR:-/tmp}/sshlist.py"
+```
+
+Rules:
+
+- **Passwords are stored in plaintext** in that file. Never print or echo the raw
+  entry; report only alias / user@host:port / auth method.
+- `useKey: true` means key auth (password empty) - the key itself lives in
+  `~/.ssh/`, not in the prefs.
+- If the app is renamed or the key moves, find it with
+  `grep -rl ssh /data/data/com.termux/shared_prefs /data/data/com.termux/databases`.
+- Other ZeroTermux state sits next to it: `shared_prefs/*.xml`,
+  `databases/*.db` (sqlite3), `files/`. Same rule: read, don't dump secrets.
+
 ## The one failure mode to know
 
 Shizuku's app process gets **frozen** (Android 16 cached-app freezer / HyperOS),
@@ -201,6 +238,37 @@ This is the normal way the phone is used while a task runs, and it works:
   `uiautomator dump` fails with `could not get idle state` on an animating keyguard.
   Do not try to read the screen while it is locked.
 
+Ask the device what state it is in instead of guessing:
+
+```bash
+droid sh 'dumpsys power | grep -m1 mWakefulness='            # Awake | Asleep | Dozing
+droid sh 'dumpsys window | grep -m2 -E "isKeyguardShowing|mDreamingLockscreen"'
+```
+
+| operation | screen on + unlocked | screen off / keyguard |
+|---|---|---|
+| `rish -c ...`, `dumpsys`, `pm`, `am` | works | works |
+| notifications (`droid status/done/tell`) | works | works |
+| `screencap` / `droid shot` | works | **blank frame** |
+| `uiautomator dump` / `droid ui` | works on a static screen | **fails on an animating keyguard** |
+| `input tap/swipe/text` | works | injected, but lands on the keyguard - no app interaction |
+
+For anything that must **read or drive the screen**, wake first and check the
+keyguard:
+
+```bash
+droid key 224        # KEYCODE_WAKEUP (wake only, does not sleep)
+droid sh 'dumpsys window | grep -m1 isKeyguardShowing'   # want: isKeyguardShowing=false
+```
+
+Do not use `droid key 26` (KEYCODE_POWER) to wake - it toggles, so it turns the
+screen **off** if it was already on. Waking does not unlock a secure keyguard
+(PIN / pattern / password): if `isKeyguardShowing=true`, ask the user to unlock,
+or let a paired Bluetooth device do it - never guess a code.
+
+HyperOS-specific failures around freezing, background activity starts and
+notifications are collected in [references/hyperos.md](references/hyperos.md).
+
 One caveat seen on this device: a bound Mi Band can wake/unlock the phone, which
 brings Termux back to the foreground and therefore cancels the notification - that
 is the intended behaviour, not a bug.
@@ -255,6 +323,8 @@ actions. Specifically:
 Nothing here is tied to a session: the skill folder plus `~/bin/droid` and the
 built helper persist on disk, so a new Codex session can call `droid` directly.
 Run `droid setup` to see what is present and what is missing.
+OEM-specific behaviour - app freezer, blocked background starts, notification
+focus/island, keyguard - lives in [references/hyperos.md](references/hyperos.md).
 
 Portable as-is (no changes needed on another device):
 
